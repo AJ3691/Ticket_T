@@ -28,8 +28,15 @@ def run(agent: str, task: str, instruction: str, project_dir: Path) -> int:
     Returns the subprocess exit code.
     """
     prompt = build_prompt(agent, task, instruction)
-    cmd = ["claude", "--print", "--dangerously-skip-permissions", prompt]
 
+    # Pass prompt via stdin to avoid shell quoting issues on Windows.
+    # shell=True + list argument causes cmd.exe to split the prompt on spaces.
     with Spinner(f"Running [{agent}] {task}"):
-        result = subprocess.run(cmd, cwd=str(project_dir), shell=True)
+        result = subprocess.run(
+            "claude --print --dangerously-skip-permissions",
+            input=prompt,
+            text=True,
+            cwd=str(project_dir),
+            shell=True,
+        )
     return result.returncode
