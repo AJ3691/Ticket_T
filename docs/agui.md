@@ -148,4 +148,4 @@ The browser client uses `fetch()` with `ReadableStream` and parses `data: ...\n\
 
 ### What's next
 
-Phase 3 (`specs/agui_phase3.md`) adds a direct LLM streaming backend and reuses the same frontend event rendering pipeline.
+Phase 3 can follow either the direct LLM plan in `specs/agui_phase3.md` or the LangGraph-focused learning plan in `specs/agui_phase3_langgraph.md`. The LangGraph plan keeps the same AG-UI event pipeline while adding a graph-based triage workflow.
