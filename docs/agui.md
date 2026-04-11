@@ -148,4 +148,69 @@ The browser client uses `fetch()` with `ReadableStream` and parses `data: ...\n\
 
 ### What's next
 
-Phase 3 can follow either the direct LLM plan in `specs/agui_phase3.md` or the LangGraph-focused learning plan in `specs/agui_phase3_langgraph.md`. The LangGraph plan keeps the same AG-UI event pipeline while adding a graph-based triage workflow.
+Phase 3 follows the LangGraph-focused learning plan in `specs/agui_phase3_langgraph.md`. It replaces the earlier direct-LLM endpoint idea with a graph-based triage workflow at `POST /agui/triage`.
+
+---
+
+## Phase 3 - LangGraph Proof Of Concept
+
+### What was built
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `agent_runner/langgraph_triage.py` | Created | Deterministic LangGraph workflow with classify, draft, and format nodes |
+| `agent_runner/langgraph_adapter.py` | Created | Adapter from LangGraph updates to AG-UI events |
+| `agui_server.py` | Updated | Added `POST /agui/triage` endpoint |
+| `tests/test_agui_langgraph.py` | Created | Unit and endpoint tests for the LangGraph path |
+| `requirements.txt` | Updated | Added `langgraph>=0.2` |
+| `agui-frontend/` | Updated | Added LangGraph Triage mode using the same event stream renderer |
+
+### How it works
+
+```text
+Browser form
+  -> POST /agui/triage
+  -> langgraph_triage_events(...)
+  -> build_triage_graph().astream(..., stream_mode="updates")
+  -> LangGraph node update
+  -> AG-UI TextMessageContentEvent
+  -> EventStream.tsx
+```
+
+The first implementation is intentionally deterministic. It teaches the
+integration without requiring an API key. A later version can replace the
+`draft_recommendations` node with an LLM-backed node while keeping the same
+endpoint and AG-UI event adapter.
+
+### Graph shape
+
+```text
+START
+  -> classify_ticket
+  -> draft_recommendations
+  -> format_response
+  -> END
+```
+
+Each node returns a partial state update. The adapter streams each update as an
+AG-UI content event and also emits step markers for visibility in the frontend.
+
+### How to run
+
+```powershell
+uvicorn agui_server:app --reload --port 8002
+
+cd agui-frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` and choose `LangGraph Triage`.
+
+### Smoke test
+
+```powershell
+curl -N -X POST http://localhost:8002/agui/triage `
+  -H "Content-Type: application/json" `
+  -d "{\"threadId\":\"t1\",\"runId\":\"r1\",\"title\":\"Cannot log in\",\"description\":\"Password reset token expired\"}"
+```

@@ -6,3 +6,4 @@ httpx==0.28.1
 starlette==0.46.2
 typer>=0.12
 ag-ui-protocol>=0.1.14
+langgraph>=0.2

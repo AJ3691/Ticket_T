@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import StreamingResponse
 
 from agent_runner.agui_adapter import agent_run_events
+from agent_runner.langgraph_adapter import langgraph_triage_events
 from agent_runner.registry import AGENTS, TASKS
 
 # ---------------------------------------------------------------------------
@@ -62,6 +63,15 @@ class AgentRunInput(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
 
+class TriageInput(BaseModel):
+    thread_id: str = Field(alias="threadId")
+    run_id: str = Field(alias="runId")
+    title: str
+    description: str
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -92,6 +102,36 @@ async def agui_endpoint(body: AgentRunInput) -> StreamingResponse:
             body.agent,
             body.task,
             body.instruction,
+            body.thread_id,
+            body.run_id,
+        ):
+            yield encoder.encode(event)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+@app.post("/agui/triage")
+async def agui_triage_endpoint(body: TriageInput) -> StreamingResponse:
+    """
+    Stream AG-UI events for the LangGraph triage proof of concept.
+
+    This endpoint replaces the direct-LLM Phase 3 idea. The first version uses
+    deterministic LangGraph nodes so the integration can be learned and tested
+    without API keys.
+    """
+
+    async def event_stream():
+        async for event in langgraph_triage_events(
+            body.title,
+            body.description,
             body.thread_id,
             body.run_id,
         ):

@@ -1,6 +1,11 @@
 import { useCallback, useState } from "react";
 import { BASE_URL } from "../api";
-import type { AgentRunRequest, AgUIEvent, RunStatus } from "../types";
+import type {
+  AgentRunRequest,
+  AgUIEvent,
+  LangGraphTriageRequest,
+  RunStatus
+} from "../types";
 
 function isAgUIEvent(value: unknown): value is AgUIEvent {
   return (
@@ -22,13 +27,13 @@ export function useAgentRun() {
     setStatus("idle");
   }, []);
 
-  const runAgent = useCallback(async (request: AgentRunRequest) => {
+  const streamEvents = useCallback(async (path: string, request: object) => {
     setEvents([]);
     setTextContent("");
     setStatus("running");
 
     try {
-      const response = await fetch(`${BASE_URL}/agui`, {
+      const response = await fetch(`${BASE_URL}${path}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -114,5 +119,15 @@ export function useAgentRun() {
     }
   }, []);
 
-  return { events, status, textContent, runAgent, reset };
+  const runAgent = useCallback(
+    (request: AgentRunRequest) => streamEvents("/agui", request),
+    [streamEvents]
+  );
+
+  const runLangGraphTriage = useCallback(
+    (request: LangGraphTriageRequest) => streamEvents("/agui/triage", request),
+    [streamEvents]
+  );
+
+  return { events, status, textContent, runAgent, runLangGraphTriage, reset };
 }

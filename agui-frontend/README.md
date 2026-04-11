@@ -38,7 +38,8 @@ npm run build
 
 ## Flow
 
-1. The app loads agents and tasks from `GET /agents`.
-2. The form posts a run request to `POST /agui`.
-3. The hook reads the `text/event-stream` response.
-4. Events are rendered as they arrive.
+1. Agent Runner mode loads agents and tasks from `GET /agents`.
+2. Agent Runner mode posts a run request to `POST /agui`.
+3. LangGraph Triage mode posts ticket text to `POST /agui/triage`.
+4. The hook reads the `text/event-stream` response.
+5. Events are rendered as they arrive.

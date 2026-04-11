@@ -9,6 +9,7 @@ export type EventType =
   | "TEXT_MESSAGE_END";
 
 export type RunStatus = "idle" | "running" | "done" | "error";
+export type RunMode = "agent" | "langgraph";
 
 export interface BaseEvent {
   type: EventType;
@@ -79,6 +80,13 @@ export interface AgentRunRequest {
   agent: string;
   task: string;
   instruction: string;
+  threadId: string;
+  runId: string;
+}
+
+export interface LangGraphTriageRequest {
+  title: string;
+  description: string;
   threadId: string;
   runId: string;
 }

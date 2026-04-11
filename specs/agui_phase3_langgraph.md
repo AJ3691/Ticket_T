@@ -30,7 +30,7 @@ second backend mode.
 ```text
 React frontend
   |
-  | POST /agui/langgraph-triage
+  | POST /agui/triage
   v
 agui_server.py
   |
@@ -245,7 +245,7 @@ Testing rules:
 Add endpoint:
 
 ```text
-POST /agui/langgraph-triage
+POST /agui/triage
 ```
 
 Request model:
@@ -263,7 +263,7 @@ class LangGraphTriageInput(BaseModel):
 Handler:
 
 ```python
-@app.post("/agui/langgraph-triage")
+@app.post("/agui/triage")
 async def langgraph_triage_endpoint(body: LangGraphTriageInput):
     async def event_stream():
         async for event in langgraph_triage_events(
@@ -333,7 +333,7 @@ Then:
 
 ```typescript
 runAgent(...) -> streamEvents("/agui", request)
-runLangGraphTriage(...) -> streamEvents("/agui/langgraph-triage", request)
+runLangGraphTriage(...) -> streamEvents("/agui/triage", request)
 ```
 
 ---
@@ -404,7 +404,7 @@ Append a Phase 3 section:
 Endpoint:
 
 ```text
-POST /agui/langgraph-triage
+POST /agui/triage
 ```
 
 Request:
@@ -456,7 +456,7 @@ Done when:
 
 - `agent_runner/langgraph_triage.py` exists.
 - `agent_runner/langgraph_adapter.py` exists.
-- `/agui/langgraph-triage` streams events.
+- `/agui/triage` streams events.
 - Frontend has a LangGraph mode.
 - Tests pass without API keys.
 
@@ -510,7 +510,7 @@ uvicorn agui_server:app --reload --port 8002
 Then:
 
 ```powershell
-curl -N -X POST http://localhost:8002/agui/langgraph-triage `
+curl -N -X POST http://localhost:8002/agui/triage `
   -H "Content-Type: application/json" `
   -d "{\"threadId\":\"t1\",\"runId\":\"r1\",\"title\":\"Cannot log in\",\"description\":\"Password reset token expired\"}"
 ```
@@ -557,7 +557,7 @@ and final recommendations.
 - [ ] Deterministic triage graph compiles.
 - [ ] Graph has at least three nodes: classify, draft, format.
 - [ ] Adapter emits valid AG-UI lifecycle events.
-- [ ] `/agui/langgraph-triage` returns `text/event-stream`.
+- [ ] `/agui/triage` returns `text/event-stream`.
 - [ ] Frontend can switch between Agent Runner and LangGraph Triage.
 - [ ] Existing Agent Runner mode still works.
 - [ ] Existing `EventStream` renders both modes.
@@ -580,11 +580,12 @@ and final recommendations.
 
 ## Open Questions
 
-1. Should the first LangGraph implementation be fully deterministic, or should
-   it include an optional LLM node from the start?
-2. Should the endpoint be named `/agui/langgraph-triage` or should it replace
-   the earlier planned `/agui/triage` endpoint?
-3. Should LangGraph state updates render as plain text or as structured
-   collapsible event rows in the frontend?
-4. Should Phase 3 eventually use the existing `app.engine.get_recommendations`
-   as one node, or should it stay separate for learning purposes?
+1. The first implementation is deterministic for a simple proof of concept.
+   An LLM-backed node is optional and should be added after the integration is
+   understandable.
+2. The LangGraph proof of concept replaces the earlier direct-LLM endpoint and
+   uses `POST /agui/triage`.
+3. LangGraph updates render as plain AG-UI text content first. Structured rows
+   can be added later.
+4. The graph stays separate from the existing `app.engine.get_recommendations`
+   for now so the LangGraph integration is easy to understand.
