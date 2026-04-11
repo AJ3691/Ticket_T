@@ -36,3 +36,7 @@ Thumbs.db
 *.log
 demo/*.snapshot
 claude_desktop_config.json
+
+# Frontend
+agui-frontend/node_modules/
+agui-frontend/dist/
