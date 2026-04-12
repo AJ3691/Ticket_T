@@ -125,7 +125,8 @@ def _stream_subprocess(
             timed_out = threading.Event()
 
             def _kill_on_timeout():
-                if not timed_out.wait(timeout):
+                # wait() returns True if event was set (run finished); False if timeout elapsed.
+                if timed_out.wait(timeout):
                     return
                 proc.kill()
 

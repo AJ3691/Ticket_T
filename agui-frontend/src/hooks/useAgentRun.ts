@@ -53,6 +53,19 @@ export function useAgentRun() {
       const decoder = new TextDecoder();
       let buffer = "";
 
+      const consumeEvent = (parsed: AgUIEvent) => {
+        setEvents((current) => [...current, parsed]);
+        if (parsed.type === "TEXT_MESSAGE_CONTENT") {
+          setTextContent((current) => `${current}${parsed.delta}\n`);
+        }
+        if (parsed.type === "RUN_FINISHED") {
+          setStatus("done");
+        }
+        if (parsed.type === "RUN_ERROR") {
+          setStatus("error");
+        }
+      };
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
@@ -75,19 +88,7 @@ export function useAgentRun() {
               continue;
             }
 
-            setEvents((current) => [...current, parsed]);
-
-            if (parsed.type === "TEXT_MESSAGE_CONTENT") {
-              setTextContent((current) => `${current}${parsed.delta}\n`);
-            }
-
-            if (parsed.type === "RUN_FINISHED") {
-              setStatus("done");
-            }
-
-            if (parsed.type === "RUN_ERROR") {
-              setStatus("error");
-            }
+            consumeEvent(parsed);
           }
         }
       }
@@ -98,7 +99,7 @@ export function useAgentRun() {
           if (line.startsWith("data: ")) {
             const parsed: unknown = JSON.parse(line.slice(6));
             if (isAgUIEvent(parsed)) {
-              setEvents((current) => [...current, parsed]);
+              consumeEvent(parsed);
             }
           }
         }
