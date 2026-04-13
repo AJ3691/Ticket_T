@@ -5,6 +5,7 @@ import uuid
 from fastapi import FastAPI, Request
 from app.engine import get_recommendations
 from app.models import TicketInput, TriageResponse
+from app.rules.llm import get_llm_metrics
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ticket_triage")
@@ -60,4 +61,4 @@ def health():
 
 @app.get("/metrics")
 def metrics():
-    return _metrics
+    return {**_metrics, **get_llm_metrics()}

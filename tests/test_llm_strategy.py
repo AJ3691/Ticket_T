@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from app.models import Recommendation
-from app.rules.llm import LLMStrategy, get_adapter, AnthropicAdapter, OpenAIAdapter
+from app.rules.llm import LLMStrategy, get_adapter, AnthropicAdapter, OpenAIAdapter, CallResult, get_llm_metrics, _llm_metrics
 
 
 # ── Fallback behaviour ────────────────────────────────────────────────────────
@@ -132,3 +132,95 @@ class TestInterface:
             assert r.action
             assert r.why
             assert isinstance(r.confidence, float)
+
+
+# ── Observability metrics ─────────────────────────────────────────────────────
+
+class TestMetrics:
+
+    def test_get_llm_metrics_has_expected_keys(self):
+        m = get_llm_metrics()
+        for key in ("llm_calls", "llm_fallbacks", "total_input_tokens",
+                    "total_output_tokens", "total_cost_usd", "total_latency_ms",
+                    "avg_latency_ms"):
+            assert key in m, f"missing key: {key}"
+
+    def test_fallback_increments_fallback_count(self, monkeypatch):
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        before = _llm_metrics["llm_fallbacks"]
+        strategy = LLMStrategy()
+        strategy.recommend("test", "test description")
+        assert _llm_metrics["llm_fallbacks"] > before
+
+    def test_successful_call_increments_llm_calls(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
+        monkeypatch.setenv("LLM_PROVIDER", "claude")
+        strategy = LLMStrategy()
+        if strategy._adapter is None:
+            pytest.skip("adapter not ready")
+        mock_result = CallResult(
+            text=json.dumps({"recommendations": [
+                {"action": "Check logs", "confidence": 0.9, "why": "Logs show the error."}
+            ]}),
+            input_tokens=100,
+            output_tokens=50,
+        )
+        strategy._adapter.call = MagicMock(return_value=mock_result)
+        before = _llm_metrics["llm_calls"]
+        strategy.recommend("test", "description")
+        assert _llm_metrics["llm_calls"] == before + 1
+        assert _llm_metrics["total_input_tokens"] >= 100
+        assert _llm_metrics["total_output_tokens"] >= 50
+
+    def test_cost_is_non_negative(self):
+        m = get_llm_metrics()
+        assert m["total_cost_usd"] >= 0.0
+
+    def test_avg_latency_is_float(self):
+        m = get_llm_metrics()
+        assert isinstance(m["avg_latency_ms"], float)
+
+
+# -- Observability metrics ----------------------------------------------------
+
+class TestMetrics:
+
+    def test_get_llm_metrics_has_expected_keys(self):
+        m = get_llm_metrics()
+        for key in ("llm_calls", "llm_fallbacks", "total_input_tokens",
+                    "total_output_tokens", "total_cost_usd", "total_latency_ms",
+                    "avg_latency_ms"):
+            assert key in m, f"missing key: {key}"
+
+    def test_fallback_increments_fallback_count(self, monkeypatch):
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        before = _llm_metrics["llm_fallbacks"]
+        strategy = LLMStrategy()
+        strategy.recommend("test", "test description")
+        assert _llm_metrics["llm_fallbacks"] > before
+
+    def test_successful_call_records_tokens(self, monkeypatch):
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-key")
+        monkeypatch.setenv("LLM_PROVIDER", "claude")
+        strategy = LLMStrategy()
+        if strategy._adapter is None:
+            pytest.skip("adapter not ready")
+        mock_result = CallResult(
+            text=json.dumps({"recommendations": [
+                {"action": "Check logs", "confidence": 0.9, "why": "Logs show the error."}
+            ]}),
+            input_tokens=100,
+            output_tokens=50,
+        )
+        strategy._adapter.call = MagicMock(return_value=mock_result)
+        before_calls = _llm_metrics["llm_calls"]
+        before_input = _llm_metrics["total_input_tokens"]
+        strategy.recommend("test", "description")
+        assert _llm_metrics["llm_calls"] == before_calls + 1
+        assert _llm_metrics["total_input_tokens"] == before_input + 100
+
+    def test_cost_is_non_negative(self):
+        assert get_llm_metrics()["total_cost_usd"] >= 0.0
+
+    def test_avg_latency_is_float(self):
+        assert isinstance(get_llm_metrics()["avg_latency_ms"], float)
