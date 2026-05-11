@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "agent-harness": {
+      "command": "/path/to/your/project/.venv/Scripts/python.exe",
+      "args": [
+        "/path/to/your/project/mcp_server.py"
+      ]
+    }
+  }
+}
